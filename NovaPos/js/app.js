@@ -237,7 +237,6 @@ async function saveModal(e){
      record.codigo = "PRD-" + Math.floor(100 + Math.random() * 900);
    }
    try {
-     // Envía los datos mediante POST a tu backend en Render para guardarlos en Supabase
      const nuevoProducto = await apiRequest("/api/productos", {
        method: "POST",
        body: JSON.stringify(record)
