@@ -188,7 +188,7 @@ function render(){
 }
 
 const formSchemas={
- product:{key:"products",title:"producto",fields:[["codigo","Código del producto","text",true],["nombre","Nombre del producto","text",true],["categoria","Categoría","select",true],["precio","Precio de venta (Q)","number",true],["costo","Costo (Q)","number",true],["stock","Existencias iniciales","number",true],["estado","Estado","select",true]]},
+ product:{key:"products",title:"producto",fields:[["codigo","Código del producto","text",false],["nombre","Nombre del producto","text",true],["categoria","Categoría","select",true],["precio","Precio de venta (Q)","number",true],["costo","Costo (Q)","number",true],["stock","Existencias iniciales","number",true],["estado","Estado","select",true]]},
  customer:{key:"customers",title:"cliente",fields:[["nombre","Nombre completo","text",true],["nit","NIT","text",false],["telefono","Teléfono","tel",false],["correo","Correo electrónico","email",false],["direccion","Dirección","text",false]]},
  supplier:{key:"suppliers",title:"proveedor",fields:[["nombre","Nombre del proveedor","text",true],["nit","NIT","text",false],["contacto","Persona de contacto","text",false],["telefono","Teléfono","tel",false],["correo","Correo electrónico","email",false]]},
  category:{key:"categories",title:"categoría",fields:[["nombre","Nombre de categoría","text",true],["descripcion","Descripción","text",false]]},
@@ -215,20 +215,66 @@ function openModal(type,id=null){
  document.getElementById("recordDialog").showModal();
 }
 function closeModal(){document.getElementById("recordDialog").close();activeModal={type:null,id:null}}
-function saveModal(e){
- e.preventDefault();const {type,id}=activeModal,schema=formSchemas[type];if(!schema)return;
- const fd=new FormData(e.target),record={};schema.fields.forEach(([name,label,t])=>record[name]=fd.get(name));
- ["precio","costo","stock","cantidad"].forEach(k=>{if(record[k]!==undefined)record[k]=Number(record[k])});
- if(type==="product"&&record.precio<0){toast("El precio no puede ser negativo.","error");return}
- if(type==="purchase"){
-  const product=state.products.find(p=>p.nombre===record.producto);
-  if(!product){toast("Selecciona un producto válido.","error");return}
-  record.id=nextId("purchases");record.total=product.costo*record.cantidad;record.detalle=`${record.producto} × ${record.cantidad}`;record.estado="Completada";
-  product.stock+=record.cantidad;state.purchases.unshift(record);
- }else if(id){Object.assign(state[schema.key].find(x=>x.id===Number(id)),record)}
- else{record.id=nextId(schema.key);if(type==="product"&&!record.codigo)record.codigo="PRD-"+String(record.id).padStart(3,"0");state[schema.key].unshift(record)}
- closeModal();render();toast(type==="purchase"?"Compra registrada correctamente.":"Registro guardado exitosamente.");
+
+async function saveModal(e){
+ e.preventDefault();
+ const {type, id} = activeModal;
+ const schema = formSchemas[type];
+ if(!schema) return;
+
+ const fd = new FormData(e.target);
+ const record = {};
+ schema.fields.forEach(([name]) => record[name] = fd.get(name));
+ ["precio", "costo", "stock", "cantidad"].forEach(k => { if(record[k] !== undefined) record[k] = Number(record[k]); });
+
+ if(type === "product" && record.precio < 0) {
+   toast("El precio no puede ser negativo.", "error");
+   return;
+ }
+
+ if(type === "product") {
+   if(!record.codigo) {
+     record.codigo = "PRD-" + Math.floor(100 + Math.random() * 900);
+   }
+   try {
+     // Envía los datos mediante POST a tu backend en Render para guardarlos en Supabase
+     const nuevoProducto = await apiRequest("/api/productos", {
+       method: "POST",
+       body: JSON.stringify(record)
+     });
+     state.products.unshift(nuevoProducto);
+     closeModal();
+     render();
+     toast("Producto guardado exitosamente en la base de datos.");
+   } catch(error) {
+     console.error("Error al guardar producto:", error);
+     toast("Error al guardar en la base de datos.", "error");
+   }
+ } else if(type === "purchase") {
+  const product = state.products.find(p => p.nombre === record.producto);
+  if(!product) { toast("Selecciona un producto válido.", "error"); return; }
+  record.id = nextId("purchases");
+  record.total = product.costo * record.cantidad;
+  record.detalle = `${record.producto} × ${record.cantidad}`;
+  record.estado = "Completada";
+  product.stock += record.cantidad;
+  state.purchases.unshift(record);
+  closeModal();
+  render();
+  toast("Compra registrada correctamente.");
+ } else {
+  if(id) {
+    Object.assign(state[schema.key].find(x => x.id === Number(id)), record);
+  } else {
+    record.id = nextId(schema.key);
+    state[schema.key].unshift(record);
+  }
+  closeModal();
+  render();
+  toast("Registro guardado exitosamente.");
+ }
 }
+
 function deleteRecord(key,id,label){
  const item=state[key].find(x=>x.id===Number(id));if(!item)return;
  if(!confirm(`¿Seguro que deseas eliminar ${label} "${item.nombre||item.codigo}"?`))return;
