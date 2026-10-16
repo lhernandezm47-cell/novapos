@@ -1,32 +1,19 @@
 /* NovaPOS frontend conectado a API y Base de Datos.
    Configurado con la URL de Render y Supabase. */
 const API_BASE_URL = "https://mi-api-eoh3.onrender.com"; 
-const USE_DEMO_DATA = false; // Activado para consumir datos reales de la API.
+const USE_DEMO_DATA = false; // Desactivado para consumir datos reales de la API[cite: 16].
 
 const state = {
   view: "dashboard",
   products: [],
-  customers: [
-    {id:1,nombre:"Cliente General",nit:"CF",telefono:"—",correo:"—",direccion:"—"},
-    {id:2,nombre:"María López",nit:"1234567-8",telefono:"5555-0101",correo:"maria@email.com",direccion:"Antigua Guatemala"}
-  ],
-  suppliers: [
-    {id:1,nombre:"Distribuidora Central",nit:"5487123-4",contacto:"Carlos Pérez",telefono:"5555-0202",correo:"ventas@central.com"}
-  ],
-  categories: [
-    {id:1,nombre:"Abarrotes",descripcion:"Productos de consumo diario"},
-    {id:2,nombre:"Bebidas",descripcion:"Bebidas frías y calientes"},
-    {id:3,nombre:"Limpieza",descripcion:"Artículos para el hogar"},
-    {id:4,nombre:"Dulces",descripcion:"Confitería y chocolates"}
-  ],
-  sales: [
-    {id:1001,fecha:new Date().toISOString().slice(0,10),cliente:"Cliente General",metodo:"Efectivo",total:142.5,estado:"Completada"},
-    {id:1000,fecha:new Date(Date.now()-86400000).toISOString().slice(0,10),cliente:"María López",metodo:"Tarjeta",total:86.25,estado:"Completada"}
-  ],
+  customers: [],
+  suppliers: [],
+  categories: [],
+  sales: [],
   purchases: [],
   cart: [],
   cash: {open:false,initial:0,final:null},
-  nextIds: {products:7,customers:3,suppliers:2,categories:5,sales:1002,purchases:1}
+  nextIds: {products:1,customers:1,suppliers:1,categories:1,sales:1,purchases:1}
 };
 
 const pageMeta = {
@@ -48,7 +35,6 @@ const content = document.getElementById("appContent");
 const money = value => new Intl.NumberFormat("es-GT",{style:"currency",currency:"GTQ"}).format(Number(value)||0);
 const esc = value => String(value ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const dateLabel = value => value ? new Date(value+"T12:00:00").toLocaleDateString("es-GT",{day:"2-digit",month:"short",year:"numeric"}) : "—";
-const nextId = key => state.nextIds[key]++;
 const iconFor = name => ({ "Abarrotes":"☕","Bebidas":"🥤","Limpieza":"🧴","Dulces":"🍫" }[name] || "▦");
 
 function toast(message,type="success"){
@@ -77,10 +63,20 @@ async function apiRequest(path, options={}){
 async function cargarDatosRemotos() {
   if (USE_DEMO_DATA) return;
   try {
-    const prods = await apiRequest("/api/productos");
+    const [prods, cats, custs, supps] = await Promise.all([
+      apiRequest("/api/productos").catch(() => []),
+      apiRequest("/api/categorias").catch(() => []),
+      apiRequest("/api/clientes").catch(() => []),
+      apiRequest("/api/proveedores").catch(() => [])
+    ]);
+    
     state.products = prods || [];
+    state.categories = cats || [];
+    state.customers = custs || [];
+    state.suppliers = supps || [];
+    
     render();
-    toast("Productos sincronizados con la base de datos.");
+    toast("Datos sincronizados con la base de datos.");
   } catch (error) {
     console.error("Error al sincronizar con la API:", error);
     toast("No se pudo conectar con la base de datos.", "error");
@@ -134,15 +130,15 @@ function renderProducts(){
  ${tablePanel("Catálogo de productos",["Producto","Categoría","Precio de venta","Existencias","Estado","Acciones"],rows,`<div class="search-wrap"><span class="search-symbol">⌕</span><input class="search-input" id="productSearch" placeholder="Buscar producto..." aria-label="Buscar producto"></div>${btn("＋ Agregar","new-product","primary")}`)}`;
 }
 function renderCategories(){
- const rows=state.categories.map(c=>`<tr><td><div class="product-cell"><div class="product-thumb">◈</div><div><strong>${esc(c.nombre)}</strong><small>ID ${c.id}</small></div></div></td><td>${esc(c.descripcion||"—")}</td><td>${state.products.filter(p=>p.categoria===c.nombre).length}</td><td><div class="row-actions"><button class="table-action" data-action="edit-category" data-id="${c.id}" title="Editar">✎</button><button class="table-action" data-action="delete-category" data-id="${c.id}" title="Eliminar">×</button></div></td></tr>`).join("");
+ const rows=state.categories.map(c=>`<tr><td><div class="product-cell"><div class="product-thumb">◈</div><div><strong>${esc(c.nombre)}</strong><small>ID ${c.id}</small></div></div></td><td>${esc(c.descripcion||"—")}</td><td>${state.products.filter(p=>p.categoria===c.nombre).length}</td><td><div class="row-actions"><button class="table-action" data-action="delete-category" data-id="${c.id}" title="Eliminar">×</button></div></td></tr>`).join("");
  return `${heading("Categorías",pageMeta.categories[1],btn("+ Nueva categoría","new-category"))}${tablePanel("Categorías registradas",["Categoría","Descripción","Productos asociados","Acciones"],rows)}`;
 }
 function renderCustomers(){
- const rows=state.customers.map(c=>`<tr><td><div class="product-cell"><div class="avatar">${esc(c.nombre.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase())}</div><div><strong>${esc(c.nombre)}</strong><small>${esc(c.correo||"Sin correo")}</small></div></div></td><td>${esc(c.nit||"—")}</td><td>${esc(c.telefono||"—")}</td><td>${esc(c.direccion||"—")}</td><td><div class="row-actions"><button class="table-action" data-action="edit-customer" data-id="${c.id}" title="Editar">✎</button><button class="table-action" data-action="delete-customer" data-id="${c.id}" title="Eliminar">×</button></div></td></tr>`).join("");
+ const rows=state.customers.map(c=>`<tr><td><div class="product-cell"><div class="avatar">${esc((c.nombre||"").split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase())}</div><div><strong>${esc(c.nombre)}</strong><small>${esc(c.correo||"Sin correo")}</small></div></div></td><td>${esc(c.nit||"—")}</td><td>${esc(c.telefono||"—")}</td><td>${esc(c.direccion||"—")}</td><td><div class="row-actions"><button class="table-action" data-action="delete-customer" data-id="${c.id}" title="Eliminar">×</button></div></td></tr>`).join("");
  return `${heading("Clientes",pageMeta.customers[1],btn("+ Nuevo cliente","new-customer"))}${tablePanel("Directorio de clientes",["Cliente","NIT","Teléfono","Dirección","Acciones"],rows,`<div class="search-wrap"><span class="search-symbol">⌕</span><input class="search-input" id="customerSearch" placeholder="Buscar cliente..." aria-label="Buscar cliente"></div>`)}`;
 }
 function renderSuppliers(){
- const rows=state.suppliers.map(s=>`<tr><td><div class="product-cell"><div class="product-thumb">▧</div><div><strong>${esc(s.nombre)}</strong><small>${esc(s.correo||"Sin correo")}</small></div></div></td><td>${esc(s.nit||"—")}</td><td>${esc(s.contacto||"—")}</td><td>${esc(s.telefono||"—")}</td><td><div class="row-actions"><button class="table-action" data-action="edit-supplier" data-id="${s.id}" title="Editar">✎</button><button class="table-action" data-action="delete-supplier" data-id="${s.id}" title="Eliminar">×</button></div></td></tr>`).join("");
+ const rows=state.suppliers.map(s=>`<tr><td><div class="product-cell"><div class="product-thumb">▧</div><div><strong>${esc(s.nombre)}</strong><small>${esc(s.correo||"Sin correo")}</small></div></div></td><td>${esc(s.nit||"—")}</td><td>${esc(s.contacto||"—")}</td><td>${esc(s.telefono||"—")}</td><td><div class="row-actions"><button class="table-action" data-action="delete-supplier" data-id="${s.id}" title="Eliminar">×</button></div></td></tr>`).join("");
  return `${heading("Proveedores",pageMeta.suppliers[1],btn("+ Nuevo proveedor","new-supplier"))}${tablePanel("Directorio de proveedores",["Proveedor","NIT","Contacto","Teléfono","Acciones"],rows)}`;
 }
 function renderSales(){
@@ -150,7 +146,7 @@ function renderSales(){
  return `${heading("Ventas",pageMeta.sales[1],btn("+ Nueva venta","go-pos"))}<div class="stats-grid">${stat("Ventas registradas",state.sales.length,"Historial de operaciones","↗","icon-purple")}${stat("Total acumulado",money(state.sales.reduce((a,s)=>a+s.total,0)),"Suma del historial cargado","＄","icon-green")}${stat("Ticket promedio",money(state.sales.length?state.sales.reduce((a,s)=>a+s.total,0)/state.sales.length:0),"Promedio por venta","▤","icon-blue")}${stat("Última venta",state.sales.length?"#"+state.sales[0].id:"—","Identificador más reciente","◷","icon-orange")}</div>${tablePanel("Historial de ventas",["No. venta","Fecha","Cliente","Método de pago","Total","Estado","Detalle"],rows)}`;
 }
 function renderInventory(){
- const rows=state.products.map(p=>`<tr><td><div class="product-cell"><div class="product-thumb">${iconFor(p.categoria)}</div><div><strong>${esc(p.nombre)}</strong><small>${esc(p.codigo)}</small></div></div></td><td>${esc(p.categoria)}</td><td>${p.stock}</td><td>${p.stock<=5?badge(p.stock===0?"Agotado":"Bajo"):badge("Disponible")}</td><td>${money(p.costo*p.stock)}</td><td><button class="table-action" data-action="edit-product" data-id="${p.id}" title="Ajustar existencias">✎</button></td></tr>`).join("");
+ const rows=state.products.map(p=>`<tr><td><div class="product-cell"><div class="product-thumb">${iconFor(p.categoria)}</div><div><strong>${esc(p.nombre)}</strong><small>${esc(p.codigo)}</small></div></div></td><td>${esc(p.categoria)}</td><td>${p.stock}</td><td>${p.stock<=5?badge(p.stock===0?"Agotado":"Bajo"):badge("Disponible")}</td><td>${money(p.costo*p.stock)}</td><td>—</td></tr>`).join("");
  return `${heading("Inventario",pageMeta.inventory[1],btn("+ Registrar producto","new-product"))}<div class="stats-grid">${stat("Unidades en stock",state.products.reduce((a,p)=>a+p.stock,0),"Suma de existencias","▦","icon-blue")}${stat("Productos con stock bajo",state.products.filter(p=>p.stock>0&&p.stock<=5).length,"5 unidades o menos","⚑","icon-orange")}${stat("Productos agotados",state.products.filter(p=>p.stock===0).length,"Sin existencias","!","icon-purple")}${stat("Valor estimado",money(state.products.reduce((a,p)=>a+p.costo*p.stock,0)),"Costo por unidades registradas","＄","icon-green")}</div>${tablePanel("Existencias por producto",["Producto","Categoría","Unidades","Estado","Valor al costo","Acciones"],rows)}`;
 }
 function renderPurchases(){
@@ -167,13 +163,13 @@ function renderInvoices(){
 }
 function renderReports(){
  const total=state.sales.reduce((a,s)=>a+s.total,0);
- return `${heading("Reportes",pageMeta.reports[1],btn("Exportar CSV","export-sales","secondary"))}<div class="report-cards"><div class="report-card"><span>Ventas acumuladas</span><strong>${money(total)}</strong><p>De las ventas registradas</p></div><div class="report-card"><span>Productos activos</span><strong>${state.products.filter(p=>p.estado==="Activo").length}</strong><p>Productos habilitados</p></div><div class="report-card"><span>Existencias valorizadas</span><strong>${money(state.products.reduce((a,p)=>a+p.costo*p.stock,0))}</strong><p>Estimación al costo</p></div></div><div class="panel" style="margin-top:18px"><div class="panel-header"><div><h2>Resumen de ventas</h2><p>Consulta general de operaciones</p></div></div><div class="report-cards"><div class="report-card"><span>Número de ventas</span><strong>${state.sales.length}</strong></div><div class="report-card"><span>Ticket promedio</span><strong>${money(state.sales.length?total/state.sales.length:0)}</strong></div><div class="report-card"><span>Ventas completadas</span><strong>${state.sales.filter(s=>s.estado==="Completada").length}</strong></div></div></div>`;
+ return `${heading("Reportes",pageMeta.reports[1],btn("Exportar CSV","export-sales","secondary"))}<div class="report-cards"><div class="report-card"><span>Ventas acumuladas</span><strong>${money(total)}</strong><p>De las ventas registradas</p></div><div class="report-card"><span>Productos activos</span><strong>${state.products.length}</strong><p>Productos habilitados</p></div><div class="report-card"><span>Existencias valorizadas</span><strong>${money(state.products.reduce((a,p)=>a+p.costo*p.stock,0))}</strong><p>Estimación al costo</p></div></div><div class="panel" style="margin-top:18px"><div class="panel-header"><div><h2>Resumen de ventas</h2><p>Consulta general de operaciones</p></div></div><div class="report-cards"><div class="report-card"><span>Número de ventas</span><strong>${state.sales.length}</strong></div><div class="report-card"><span>Ticket promedio</span><strong>${money(state.sales.length?total/state.sales.length:0)}</strong></div><div class="report-card"><span>Ventas completadas</span><strong>${state.sales.filter(s=>s.estado==="Completada").length}</strong></div></div></div>`;
 }
 function renderUsers(){
  return `${heading("Usuarios y roles",pageMeta.users[1])}<div class="section-grid"><div class="role-card"><div class="stat-icon icon-purple" style="margin-bottom:14px">♙</div><h3>Administrador</h3><p>Acceso total a catálogos, compras, ventas, caja y reportes.</p><div class="role-permissions"><span>Productos</span><span>Compras</span><span>Ventas</span><span>Caja</span><span>Reportes</span></div></div><div class="role-card"><div class="stat-icon icon-green" style="margin-bottom:14px">▣</div><h3>Cajero</h3><p>Realiza ventas, registra clientes y opera su caja asignada.</p><div class="role-permissions"><span>Punto de venta</span><span>Clientes</span><span>Facturas</span><span>Su caja</span></div></div><div class="role-card"><div class="stat-icon icon-blue" style="margin-bottom:14px">▦</div><h3>Inventario</h3><p>Administra productos, proveedores, compras e inventario.</p><div class="role-permissions"><span>Productos</span><span>Proveedores</span><span>Compras</span><span>Inventario</span></div></div></div>`;
 }
 function renderPOS(){
- const products=state.products.filter(p=>p.stock>0&&p.estado==="Activo");
+ const products=state.products.filter(p=>p.stock>0);
  const catalog=products.map(p=>`<button class="pos-product" data-action="add-cart" data-id="${p.id}"><div class="pos-product-icon">${iconFor(p.categoria)}</div><strong>${esc(p.nombre)}</strong><small>${esc(p.codigo)} · Stock: ${p.stock}</small><div class="pos-product-bottom"><b>${money(p.precio)}</b><span class="add-plus">+</span></div></button>`).join("");
  const cart=state.cart.map(item=>{const p=state.products.find(x=>x.id===item.id);if(!p)return "";return `<div class="cart-item"><div class="activity-icon">${iconFor(p.categoria)}</div><div class="cart-item-copy"><strong>${esc(p.nombre)}</strong><small>${money(p.precio)} c/u</small><div class="qty-control" style="margin-top:7px"><button data-action="qty-minus" data-id="${p.id}">−</button><span>${item.qty}</span><button data-action="qty-plus" data-id="${p.id}">+</button></div></div><div class="cart-item-price">${money(p.precio*item.qty)}</div></div>`}).join("");
  const subtotal=state.cart.reduce((a,item)=>{const p=state.products.find(x=>x.id===item.id);return a+(p?p.precio*item.qty:0)},0);
@@ -188,11 +184,10 @@ function render(){
 }
 
 const formSchemas={
- product:{key:"products",title:"producto",fields:[["codigo","Código del producto","text",false],["nombre","Nombre del producto","text",true],["categoria","Categoría","select",true],["precio","Precio de venta (Q)","number",true],["costo","Costo (Q)","number",true],["stock","Existencias iniciales","number",true],["estado","Estado","select",true]]},
- customer:{key:"customers",title:"cliente",fields:[["nombre","Nombre completo","text",true],["nit","NIT","text",false],["telefono","Teléfono","tel",false],["correo","Correo electrónico","email",false],["direccion","Dirección","text",false]]},
- supplier:{key:"suppliers",title:"proveedor",fields:[["nombre","Nombre del proveedor","text",true],["nit","NIT","text",false],["contacto","Persona de contacto","text",false],["telefono","Teléfono","tel",false],["correo","Correo electrónico","email",false]]},
- category:{key:"categories",title:"categoría",fields:[["nombre","Nombre de categoría","text",true],["descripcion","Descripción","text",false]]},
- purchase:{key:"purchases",title:"compra",fields:[["proveedor","Proveedor","select",true],["producto","Producto","select",true],["cantidad","Cantidad","number",true],["fecha","Fecha de compra","date",true],["observaciones","Observaciones","text",false]]}
+ product:{key:"products",title:"producto",endpoint:"/api/productos",fields:[["codigo","Código del producto","text",false],["nombre","Nombre del producto","text",true],["categoria","Categoría","select",true],["precio","Precio de venta (Q)","number",true],["costo","Costo (Q)","number",true],["stock","Existencias iniciales","number",true]]},
+ customer:{key:"customers",title:"cliente",endpoint:"/api/clientes",fields:[["nombre","Nombre completo","text",true],["nit","NIT","text",false],["telefono","Teléfono","tel",false],["correo","Correo electrónico","email",false],["direccion","Dirección","text",false]]},
+ supplier:{key:"suppliers",title:"proveedor",endpoint:"/api/proveedores",fields:[["nombre","Nombre del proveedor","text",true],["nit","NIT","text",false],["contacto","Persona de contacto","text",false],["telefono","Teléfono","tel",false],["correo","Correo electrónico","email",false]]},
+ category:{key:"categories",title:"categoría",endpoint:"/api/categorias",fields:[["nombre","Nombre de categoría","text",true],["descripcion","Descripción","text",false]]}
 };
 let activeModal={type:null,id:null};
 function openModal(type,id=null){
@@ -204,10 +199,7 @@ function openModal(type,id=null){
  const fields=schema.fields.map(([name,label,typeInput,required])=>{
    let inputType=typeInput,opts="";
    if(type==="product"&&name==="categoria"){inputType="select";opts=state.categories.map(c=>`<option ${record?.categoria===c.nombre?"selected":""}>${esc(c.nombre)}</option>`).join("");}
-   else if(type==="product"&&name==="estado"){inputType="select";opts=["Activo","Inactivo"].map(v=>`<option ${record?.estado===v?"selected":""}>${v}</option>`).join("");}
-   else if(type==="purchase"&&name==="proveedor"){inputType="select";opts=state.suppliers.map(s=>`<option>${esc(s.nombre)}</option>`).join("");}
-   else if(type==="purchase"&&name==="producto"){inputType="select";opts=state.products.map(p=>`<option>${esc(p.nombre)}</option>`).join("");}
-   let value=record?.[name]??(name==="estado"?"Activo":name==="stock"||name==="costo"||name==="precio"||name==="cantidad"?"0":name==="fecha"?new Date().toISOString().slice(0,10):"");
+   let value=record?.[name]??(name==="stock"||name==="costo"||name==="precio"||name==="cantidad"?"0":"");
    const field=`<div class="form-field ${name==="direccion"||name==="observaciones"?"span-2":""}"><label for="field_${name}">${label}${required?' <span>*</span>':""}</label>${inputType==="select"?`<select class="field-select" id="field_${name}" name="${name}" ${required?"required":""}>${opts}</select>`:`<input class="field-input" id="field_${name}" name="${name}" type="${inputType}" value="${esc(value)}" ${required?"required":""} ${inputType==="number"?'min="0" step="0.01"':""}>`}</div>`;
    return field;
  }).join("");
@@ -218,7 +210,7 @@ function closeModal(){document.getElementById("recordDialog").close();activeModa
 
 async function saveModal(e){
  e.preventDefault();
- const {type, id} = activeModal;
+ const {type} = activeModal;
  const schema = formSchemas[type];
  if(!schema) return;
 
@@ -227,57 +219,29 @@ async function saveModal(e){
  schema.fields.forEach(([name]) => record[name] = fd.get(name));
  ["precio", "costo", "stock", "cantidad"].forEach(k => { if(record[k] !== undefined) record[k] = Number(record[k]); });
 
- if(type === "product" && record.precio < 0) {
-   toast("El precio no puede ser negativo.", "error");
-   return;
+ if(type === "product" && !record.codigo) {
+   record.codigo = "PRD-" + Math.floor(100 + Math.random() * 900);
  }
 
- if(type === "product") {
-   if(!record.codigo) {
-     record.codigo = "PRD-" + Math.floor(100 + Math.random() * 900);
-   }
-   try {
-     const nuevoProducto = await apiRequest("/api/productos", {
-       method: "POST",
-       body: JSON.stringify(record)
-     });
-     state.products.unshift(nuevoProducto);
-     closeModal();
-     render();
-     toast("Producto guardado exitosamente en la base de datos.");
-   } catch(error) {
-     console.error("Error al guardar producto:", error);
-     toast("Error al guardar en la base de datos.", "error");
-   }
- } else if(type === "purchase") {
-  const product = state.products.find(p => p.nombre === record.producto);
-  if(!product) { toast("Selecciona un producto válido.", "error"); return; }
-  record.id = nextId("purchases");
-  record.total = product.costo * record.cantidad;
-  record.detalle = `${record.producto} × ${record.cantidad}`;
-  record.estado = "Completada";
-  product.stock += record.cantidad;
-  state.purchases.unshift(record);
-  closeModal();
-  render();
-  toast("Compra registrada correctamente.");
- } else {
-  if(id) {
-    Object.assign(state[schema.key].find(x => x.id === Number(id)), record);
-  } else {
-    record.id = nextId(schema.key);
-    state[schema.key].unshift(record);
-  }
-  closeModal();
-  render();
-  toast("Registro guardado exitosamente.");
+ try {
+   const nuevoRegistro = await apiRequest(schema.endpoint, {
+     method: "POST",
+     body: JSON.stringify(record)
+   });
+   state[schema.key].unshift(nuevoRegistro);
+   closeModal();
+   render();
+   toast(`${schema.title.charAt(0).toUpperCase() + schema.title.slice(1)} guardado exitosamente en la base de datos.`);
+ } catch(error) {
+   console.error("Error al guardar:", error);
+   toast("Error al guardar en la base de datos.", "error");
  }
 }
 
 function deleteRecord(key,id,label){
  const item=state[key].find(x=>x.id===Number(id));if(!item)return;
  if(!confirm(`¿Seguro que deseas eliminar ${label} "${item.nombre||item.codigo}"?`))return;
- state[key]=state[key].filter(x=>x.id!==Number(id));render();toast("Registro eliminado.");
+ state[key]=state[key].filter(x=>x.id!==Number(id));render();toast("Registro eliminado localmente.");
 }
 function addCart(id){
  const p=state.products.find(x=>x.id===Number(id));if(!p)return;
@@ -293,7 +257,7 @@ function checkout(){
  if(items.some(i=>!i.product||i.qty>i.product.stock)){toast("Revisa las existencias de los productos.","error");return}
  const total=items.reduce((a,i)=>a+i.product.precio*i.qty,0);
  const customer=state.customers.find(c=>c.id===Number(document.getElementById("saleCustomer").value))||state.customers[0];
- const sale={id:nextId("sales"),fecha:new Date().toISOString().slice(0,10),cliente:customer?.nombre||"Cliente General",metodo:document.getElementById("paymentMethod").value,total,estado:"Completada"};
+ const sale={id:state.sales.length+1,fecha:new Date().toISOString().slice(0,10),cliente:customer?.nombre||"Cliente General",metodo:document.getElementById("paymentMethod").value,total,estado:"Completada"};
  items.forEach(i=>i.product.stock-=i.qty);state.sales.unshift(sale);state.cart=[];render();toast(`Venta #${sale.id} registrada por ${money(total)}.`);
 }
 function exportSales(){
@@ -310,11 +274,10 @@ function printInvoice(id){
 content.addEventListener("click",e=>{
  const b=e.target.closest("[data-action]");if(!b)return;const a=b.dataset.action,id=b.dataset.id;
  if(a==="go-pos")navTo("pos");else if(a==="go-sales")navTo("sales");
- else if(a==="new-product")openModal("product");else if(a==="edit-product")openModal("product",id);else if(a==="delete-product")deleteRecord("products",id,"el producto");
- else if(a==="new-customer")openModal("customer");else if(a==="edit-customer")openModal("customer",id);else if(a==="delete-customer")deleteRecord("customers",id,"el cliente");
- else if(a==="new-supplier")openModal("supplier");else if(a==="edit-supplier")openModal("supplier",id);else if(a==="delete-supplier")deleteRecord("suppliers",id,"el proveedor");
- else if(a==="new-category")openModal("category");else if(a==="edit-category")openModal("category",id);else if(a==="delete-category")deleteRecord("categories",id,"la categoría");
- else if(a==="new-purchase")openModal("purchase");
+ else if(a==="new-product")openModal("product");else if(a==="delete-product")deleteRecord("products",id,"el producto");
+ else if(a==="new-customer")openModal("customer");else if(a==="delete-customer")deleteRecord("customers",id,"el cliente");
+ else if(a==="new-supplier")openModal("supplier");else if(a==="delete-supplier")deleteRecord("suppliers",id,"el proveedor");
+ else if(a==="new-category")openModal("category");else if(a==="delete-category")deleteRecord("categories",id,"la categoría");
  else if(a==="add-cart")addCart(id);
  else if(a==="qty-minus"){const i=state.cart.find(x=>x.id===Number(id));if(i){i.qty--;if(i.qty<=0)state.cart=state.cart.filter(x=>x.id!==Number(id));render()}}
  else if(a==="qty-plus"){const i=state.cart.find(x=>x.id===Number(id)),p=state.products.find(x=>x.id===Number(id));if(i&&p){if(i.qty<p.stock)i.qty++;else toast("No hay existencias suficientes.","error");render()}}
@@ -322,7 +285,7 @@ content.addEventListener("click",e=>{
  else if(a==="checkout")checkout();
  else if(a==="open-cash"){const value=Number(document.getElementById("cashInitial")?.value);if(!Number.isFinite(value)||value<0||document.getElementById("cashInitial").value===""){toast("Ingresa un monto inicial válido.","error");return}state.cash={open:true,initial:value,final:null};render();toast("Caja abierta.")}
  else if(a==="close-cash"){const value=Number(document.getElementById("cashFinal")?.value);if(!Number.isFinite(value)||value<0||document.getElementById("cashFinal").value===""){toast("Ingresa el monto final contado.","error");return}state.cash.final=value;state.cash.open=false;render();toast(`Caja cerrada. Monto contado: ${money(value)}.`)}
- else if(a==="view-sale"){const s=state.sales.find(x=>x.id===Number(id));if(s)toast(`Venta #${s.id}: ${s.cliente} · ${money(s.total)} · ${s.metonent}`)}
+ else if(a==="view-sale"){const s=state.sales.find(x=>x.id===Number(id));if(s)toast(`Venta #${s.id}: ${s.cliente} · ${money(s.total)}`)}
  else if(a==="print-invoice")printInvoice(id);
  else if(a==="export-sales")exportSales();
 });
