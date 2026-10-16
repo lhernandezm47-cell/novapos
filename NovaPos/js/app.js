@@ -1,19 +1,11 @@
 /* NovaPOS frontend conectado a API y Base de Datos.
-   Configura API_BASE_URL con tu enlace de Render y cambia USE_DEMO_DATA a false.
-   Nunca coloques claves privadas de Supabase en este archivo. */
-const API_BASE_URL = "https://tu-api-en-render.onrender.com"; // <-- Pega aquí tu URL de Render sin barra al final
-const USE_DEMO_DATA = true; // Cambiar a false cuando tu API en Render esté lista y conectada a Supabase.
+   Configurado con la URL de Render y Supabase. */
+const API_BASE_URL = "https://mi-api-eoh3.onrender.com"; 
+const USE_DEMO_DATA = false; // Activado para consumir datos reales de la API.
 
 const state = {
   view: "dashboard",
-  products: [
-    {id:1,codigo:"PRD-001",nombre:"Café premium 500 g",categoria:"Abarrotes",precio:48.5,costo:30,stock:24,estado:"Activo"},
-    {id:2,codigo:"PRD-002",nombre:"Agua pura 600 ml",categoria:"Bebidas",precio:5,costo:2.5,stock:8,estado:"Activo"},
-    {id:3,codigo:"PRD-003",nombre:"Galletas integrales",categoria:"Abarrotes",precio:12.75,costo:7,stock:36,estado:"Activo"},
-    {id:4,codigo:"PRD-004",nombre:"Jugo de naranja 1 L",categoria:"Bebidas",precio:18,costo:11,stock:4,estado:"Activo"},
-    {id:5,codigo:"PRD-005",nombre:"Detergente 1 kg",categoria:"Limpieza",precio:27.5,costo:19,stock:15,estado:"Activo"},
-    {id:6,codigo:"PRD-006",nombre:"Chocolate oscuro",categoria:"Dulces",precio:9.5,costo:5,stock:0,estado:"Inactivo"}
-  ],
+  products: [],
   customers: [
     {id:1,nombre:"Cliente General",nit:"CF",telefono:"—",correo:"—",direccion:"—"},
     {id:2,nombre:"María López",nit:"1234567-8",telefono:"5555-0101",correo:"maria@email.com",direccion:"Antigua Guatemala"}
@@ -83,21 +75,12 @@ async function apiRequest(path, options={}){
 }
 
 async function cargarDatosRemotos() {
-  if (USE_DEMO_DATA) return; // Si está en modo demo, no llama a la API
+  if (USE_DEMO_DATA) return;
   try {
-    // Ejemplo de conexión para las 10 tablas principales a través de tu API:
-    // const [prods, cats, custs, sups] = await Promise.all([
-    //   apiRequest("/api/productos"),
-    //   apiRequest("/api/categorias"),
-    //   apiRequest("/api/clientes"),
-    //   apiRequest("/api/proveedores")
-    // ]);
-    // state.products = prods;
-    // state.categories = cats;
-    // state.customers = custs;
-    // state.suppliers = sups;
-    // render();
-    // toast("Datos sincronizados con la base de datos.");
+    const prods = await apiRequest("/api/productos");
+    state.products = prods || [];
+    render();
+    toast("Productos sincronizados con la base de datos.");
   } catch (error) {
     console.error("Error al sincronizar con la API:", error);
     toast("No se pudo conectar con la base de datos.", "error");
@@ -148,7 +131,6 @@ function shortcut(color,icon,title,desc,action){return `<button class="shortcut-
 function renderProducts(){
  const rows=productRows(state.products);
  return `${heading("Productos",pageMeta.products[1],btn("+ Nuevo producto","new-product"))}
- <div class="notice">Los registros que ves provienen del sistema. Al conectar Supabase, listará los datos directamente de la base de datos PostgreSQL.</div>
  ${tablePanel("Catálogo de productos",["Producto","Categoría","Precio de venta","Existencias","Estado","Acciones"],rows,`<div class="search-wrap"><span class="search-symbol">⌕</span><input class="search-input" id="productSearch" placeholder="Buscar producto..." aria-label="Buscar producto"></div>${btn("＋ Agregar","new-product","primary")}`)}`;
 }
 function renderCategories(){
@@ -173,22 +155,22 @@ function renderInventory(){
 }
 function renderPurchases(){
  const rows=state.purchases.map(p=>`<tr><td>#${p.id}</td><td>${dateLabel(p.fecha)}</td><td>${esc(p.proveedor)}</td><td>${esc(p.detalle)}</td><td>${money(p.total)}</td><td>${badge(p.estado)}</td></tr>`).join("");
- return `${heading("Compras",pageMeta.purchases[1],btn("+ Registrar compra","new-purchase"))}<div class="notice">El registro de compra se conecta a la API para actualizar el inventario y guardar en las tablas correspondientes.</div>${tablePanel("Historial de compras",["No. compra","Fecha","Proveedor","Detalle","Total","Estado"],rows)}`;
+ return `${heading("Compras",pageMeta.purchases[1],btn("+ Registrar compra","new-purchase"))}${tablePanel("Historial de compras",["No. compra","Fecha","Proveedor","Detalle","Total","Estado"],rows)}`;
 }
 function renderCash(){
  const cashContent=state.cash.open?`<div class="cash-state"><span class="status-dot"></span> Caja abierta · lista para operar</div><div class="report-cards" style="margin-top:18px"><div class="report-card"><span>Monto inicial</span><strong>${money(state.cash.initial)}</strong><p>Fondo registrado al abrir</p></div><div class="report-card"><span>Ventas en efectivo</span><strong>${money(state.sales.filter(s=>s.metodo==="Efectivo").reduce((a,s)=>a+s.total,0))}</strong><p>Calculado por el sistema</p></div><div class="report-card"><span>Estado</span><strong>Abierta</strong><p>Recuerda cerrar la caja al finalizar</p></div></div><div class="panel" style="margin-top:18px"><h2>Cierre de caja</h2><p class="page-subtitle" style="margin:8px 0 16px">Ingresa el monto contado al finalizar el turno.</p><div class="form-field" style="max-width:320px"><label for="cashFinal">Monto final contado (Q)</label><input class="field-input" id="cashFinal" type="number" min="0" step=".01" placeholder="0.00"></div><div style="margin-top:15px">${btn("Cerrar caja","close-cash","primary")}</div></div>`:`<div class="panel"><div class="stat-icon icon-purple" style="margin-bottom:16px">▣</div><h2>No hay una caja abierta</h2><p class="page-subtitle" style="margin:8px 0 20px">Para iniciar las operaciones del día, registra el monto inicial disponible.</p><div class="form-field" style="max-width:340px"><label for="cashInitial">Monto inicial (Q) <span style="color:var(--red)">*</span></label><input class="field-input" id="cashInitial" type="number" min="0" step=".01" placeholder="Ej. 500.00"></div><div style="margin-top:16px">${btn("Abrir caja","open-cash","primary")}</div></div>`;
- return `${heading("Control de caja",pageMeta.cash[1])}${cashContent}<div class="notice" style="margin-top:18px">La API gestiona la apertura, los movimientos y el cierre en la tabla de cajas (boxes).</div>`;
+ return `${heading("Control de caja",pageMeta.cash[1])}${cashContent}`;
 }
 function renderInvoices(){
  const rows=state.sales.map(s=>`<tr><td><strong>FAC-${s.id}</strong></td><td>${dateLabel(s.fecha)}</td><td>${esc(s.cliente)}</td><td>${esc(s.metodo)}</td><td>${money(s.total)}</td><td>${badge("Completada")}</td><td><button class="table-action" data-action="print-invoice" data-id="${s.id}" title="Vista de impresión">▤</button></td></tr>`).join("");
- return `${heading("Facturas y documentos",pageMeta.invoices[1])}<div class="notice">Esta pantalla muestra los documentos generados a partir de las ventas registradas.</div>${tablePanel("Documentos de venta",["Documento","Fecha","Cliente","Forma de pago","Total","Estado","Acción"],rows)}`;
+ return `${heading("Facturas y documentos",pageMeta.invoices[1])}${tablePanel("Documentos de venta",["Documento","Fecha","Cliente","Forma de pago","Total","Estado","Acción"],rows)}`;
 }
 function renderReports(){
  const total=state.sales.reduce((a,s)=>a+s.total,0);
  return `${heading("Reportes",pageMeta.reports[1],btn("Exportar CSV","export-sales","secondary"))}<div class="report-cards"><div class="report-card"><span>Ventas acumuladas</span><strong>${money(total)}</strong><p>De las ventas registradas</p></div><div class="report-card"><span>Productos activos</span><strong>${state.products.filter(p=>p.estado==="Activo").length}</strong><p>Productos habilitados</p></div><div class="report-card"><span>Existencias valorizadas</span><strong>${money(state.products.reduce((a,p)=>a+p.costo*p.stock,0))}</strong><p>Estimación al costo</p></div></div><div class="panel" style="margin-top:18px"><div class="panel-header"><div><h2>Resumen de ventas</h2><p>Consulta general de operaciones</p></div></div><div class="report-cards"><div class="report-card"><span>Número de ventas</span><strong>${state.sales.length}</strong></div><div class="report-card"><span>Ticket promedio</span><strong>${money(state.sales.length?total/state.sales.length:0)}</strong></div><div class="report-card"><span>Ventas completadas</span><strong>${state.sales.filter(s=>s.estado==="Completada").length}</strong></div></div></div>`;
 }
 function renderUsers(){
- return `${heading("Usuarios y roles",pageMeta.users[1])}<div class="notice">La administración de perfiles (administrador, cajero, inventario) se enlaza con la tabla de usuarios en Supabase.</div><div class="section-grid"><div class="role-card"><div class="stat-icon icon-purple" style="margin-bottom:14px">♙</div><h3>Administrador</h3><p>Acceso total a catálogos, compras, ventas, caja y reportes.</p><div class="role-permissions"><span>Productos</span><span>Compras</span><span>Ventas</span><span>Caja</span><span>Reportes</span></div></div><div class="role-card"><div class="stat-icon icon-green" style="margin-bottom:14px">▣</div><h3>Cajero</h3><p>Realiza ventas, registra clientes y opera su caja asignada.</p><div class="role-permissions"><span>Punto de venta</span><span>Clientes</span><span>Facturas</span><span>Su caja</span></div></div><div class="role-card"><div class="stat-icon icon-blue" style="margin-bottom:14px">▦</div><h3>Inventario</h3><p>Administra productos, proveedores, compras e inventario.</p><div class="role-permissions"><span>Productos</span><span>Proveedores</span><span>Compras</span><span>Inventario</span></div></div></div>`;
+ return `${heading("Usuarios y roles",pageMeta.users[1])}<div class="section-grid"><div class="role-card"><div class="stat-icon icon-purple" style="margin-bottom:14px">♙</div><h3>Administrador</h3><p>Acceso total a catálogos, compras, ventas, caja y reportes.</p><div class="role-permissions"><span>Productos</span><span>Compras</span><span>Ventas</span><span>Caja</span><span>Reportes</span></div></div><div class="role-card"><div class="stat-icon icon-green" style="margin-bottom:14px">▣</div><h3>Cajero</h3><p>Realiza ventas, registra clientes y opera su caja asignada.</p><div class="role-permissions"><span>Punto de venta</span><span>Clientes</span><span>Facturas</span><span>Su caja</span></div></div><div class="role-card"><div class="stat-icon icon-blue" style="margin-bottom:14px">▦</div><h3>Inventario</h3><p>Administra productos, proveedores, compras e inventario.</p><div class="role-permissions"><span>Productos</span><span>Proveedores</span><span>Compras</span><span>Inventario</span></div></div></div>`;
 }
 function renderPOS(){
  const products=state.products.filter(p=>p.stock>0&&p.estado==="Activo");
@@ -295,11 +277,11 @@ content.addEventListener("click",e=>{
  else if(a==="checkout")checkout();
  else if(a==="open-cash"){const value=Number(document.getElementById("cashInitial")?.value);if(!Number.isFinite(value)||value<0||document.getElementById("cashInitial").value===""){toast("Ingresa un monto inicial válido.","error");return}state.cash={open:true,initial:value,final:null};render();toast("Caja abierta.")}
  else if(a==="close-cash"){const value=Number(document.getElementById("cashFinal")?.value);if(!Number.isFinite(value)||value<0||document.getElementById("cashFinal").value===""){toast("Ingresa el monto final contado.","error");return}state.cash.final=value;state.cash.open=false;render();toast(`Caja cerrada. Monto contado: ${money(value)}.`)}
- else if(a==="view-sale"){const s=state.sales.find(x=>x.id===Number(id));if(s)toast(`Venta #${s.id}: ${s.cliente} · ${money(s.total)} · ${s.metodo}`)}
+ else if(a==="view-sale"){const s=state.sales.find(x=>x.id===Number(id));if(s)toast(`Venta #${s.id}: ${s.cliente} · ${money(s.total)} · ${s.metonent}`)}
  else if(a==="print-invoice")printInvoice(id);
  else if(a==="export-sales")exportSales();
 });
 
-// Inicializar cargando datos remotos si USE_DEMO_DATA está en false
+// Inicializar cargando datos reales de la API
 cargarDatosRemotos();
 render();
