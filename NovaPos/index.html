@@ -7,54 +7,51 @@
   <title>NovaPOS | Sistema de Punto de Venta</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- styles.css se conserva intacto; theme.css solo cambia el diseño -->
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/theme.css">
 </head>
 <body>
   <div class="app-shell">
+
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="mobile-menu icon-button" id="mobileMenu" aria-label="Abrir menú">☰</button>
+        <div class="brand">
+          <div class="brand-mark">N</div>
+          <div><strong>NovaPOS</strong><small>Gestión comercial</small></div>
+        </div>
+        <div class="breadcrumbs"><span>NovaPOS</span><span class="crumb-sep">/</span><strong id="breadcrumbCurrent">Panel principal</strong></div>
+      </div>
+      <div class="topbar-actions">
+        <div class="connection-status"><span class="status-dot"></span><span id="connectionLabel">Vista previa local</span></div>
+        <button class="icon-button notification-button" id="alertsButton" aria-label="Ver alertas">♧<i></i></button>
+        <div class="user-chip"><div class="top-avatar">AD</div><span>Administrador</span></div>
+      </div>
+    </header>
+
     <aside class="sidebar" id="sidebar">
-      <div class="brand">
-        <div class="brand-mark">N</div>
-        <div><strong>NovaPOS</strong><small>Gestión comercial</small></div>
-      </div>
-      <div class="workspace-label">MENÚ PRINCIPAL</div>
       <nav class="nav-menu" aria-label="Navegación principal">
-        <button class="nav-link active" data-view="dashboard"><span class="nav-icon">▦</span>Panel principal</button>
-        <button class="nav-link" data-view="pos"><span class="nav-icon">▣</span>Punto de venta <span class="nav-pill">POS</span></button>
-        <button class="nav-link" data-view="products"><span class="nav-icon">▤</span>Productos</button>
-        <button class="nav-link" data-view="categories"><span class="nav-icon">◈</span>Categorías</button>
-        <button class="nav-link" data-view="customers"><span class="nav-icon">♙</span>Clientes</button>
-        <button class="nav-link" data-view="suppliers"><span class="nav-icon">▧</span>Proveedores</button>
+        <button class="nav-link active" data-view="dashboard">Panel principal</button>
+        <button class="nav-link" data-view="pos">Punto de venta <span class="nav-pill">POS</span></button>
+        <button class="nav-link" data-view="products">Productos</button>
+        <button class="nav-link" data-view="categories">Categorías</button>
+        <button class="nav-link" data-view="customers">Clientes</button>
+        <button class="nav-link" data-view="suppliers">Proveedores</button>
         <div class="nav-divider"></div>
-        <div class="workspace-label">OPERACIONES</div>
-        <button class="nav-link" data-view="purchases"><span class="nav-icon">↙</span>Compras</button>
-        <button class="nav-link" data-view="sales"><span class="nav-icon">↗</span>Ventas</button>
-        <button class="nav-link" data-view="inventory"><span class="nav-icon">▦</span>Inventario</button>
-        <button class="nav-link" data-view="cash"><span class="nav-icon">▣</span>Control de caja</button>
-        <button class="nav-link" data-view="invoices"><span class="nav-icon">▤</span>Facturas y documentos</button>
+        <button class="nav-link" data-view="purchases">Compras</button>
+        <button class="nav-link" data-view="sales">Ventas</button>
+        <button class="nav-link" data-view="inventory">Inventario</button>
+        <button class="nav-link" data-view="cash">Control de caja</button>
+        <button class="nav-link" data-view="invoices">Facturas y documentos</button>
         <div class="nav-divider"></div>
-        <div class="workspace-label">ADMINISTRACIÓN</div>
-        <button class="nav-link" data-view="reports"><span class="nav-icon">▥</span>Reportes</button>
-        <button class="nav-link" data-view="users"><span class="nav-icon">♙</span>Usuarios y roles</button>
+        <button class="nav-link" data-view="reports">Reportes</button>
+        <button class="nav-link" data-view="users">Usuarios y roles</button>
       </nav>
-      <div class="sidebar-bottom">
-        <div class="demo-badge"><span class="status-dot"></span><div><strong>Modo demostración</strong><small>Datos locales de prueba</small></div></div>
-        <div class="profile"><div class="avatar">AD</div><div class="profile-copy"><strong>Administrador</strong><small>admin@novapos.local</small></div><button class="more-btn" title="Opciones">•••</button></div>
-      </div>
     </aside>
 
     <main class="main-area">
-      <header class="topbar">
-        <div class="topbar-left">
-          <button class="mobile-menu icon-button" id="mobileMenu" aria-label="Abrir menú">☰</button>
-          <div class="breadcrumbs"><span>NovaPOS</span><span class="crumb-sep">/</span><strong id="breadcrumbCurrent">Panel principal</strong></div>
-        </div>
-        <div class="topbar-actions">
-          <div class="connection-status"><span class="status-dot"></span><span id="connectionLabel">Vista previa local</span></div>
-          <button class="icon-button notification-button" id="alertsButton" aria-label="Ver alertas">♧<i></i></button>
-          <div class="top-avatar">AD</div>
-        </div>
-      </header>
       <section class="content" id="appContent" aria-live="polite"></section>
       <footer class="footer"><span>NovaPOS · Sistema de Punto de Venta</span><span>Frontend académico · Fase 1</span></footer>
     </main>
